@@ -14,14 +14,25 @@
     </style>
   </head>
   <body>
-    <ul id="messages"></ul>
-    <form action="" id="submitPost">
-      <input type = "text" id="post" autocomplete="off"/> <button>Submit</button>
-    </form>
+    <div id= "loginContainer">
+      <form action="" id="submitName">
+        <input type = "text" id="name" autocomplete="given-name"/> <button>Submit Name</button>
+      </form>
+    </div>
+    <div id="postContainer">
+      <ul id="messages"></ul>
+      <form action="" id="submitPost">
+        <input type = "text" id="post" autocomplete="off"/> <button>Submit</button>
+      </form>
+    </div>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
     <script>
+        // init ui
+        $("#postContainer").hide();
+
         // Initialize Socket.IO connection
         var socket = io();
     
@@ -39,6 +50,27 @@
           // Clear the input field
           $('#post').val('');
     
+          return false;
+        });
+
+        $('#submitName').submit(function () {
+          // Get input value
+          var name = $('#name').val();
+    
+          // Log the message
+          console.log("Name:",name);
+
+          axios.post('/submitName', { name:"asdf" })
+          .then(function (response) {
+            console.log(response.data);
+  
+            // Show post container
+            $("#postContainer").show();
+          })
+          .catch(function (error) {
+            console.error(error);
+          });
+
           return false;
         });
     

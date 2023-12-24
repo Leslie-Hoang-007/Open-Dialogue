@@ -21,15 +21,16 @@ io.on('connection', function (socket) {
   console.log('A user connected');
 
   // Listen for 'sentPost' event from the client
-  socket.on('sentPost', function (post) {
+  socket.on('sentPost', function (data) {
     // Log the received message
-    console.log("SERVER:", post);
+    console.log("SERVER:", data.post);
+    console.log("SERVER USER:", data.userData);
 
+    postList.unshift({name: data.userData.name, data:data.post});
     // Broadcast to sender
-    
-    io.to(socket.id).emit('serverReply', post);
+    io.to(socket.id).emit('serverReply', postList);
     // Broadcast the message to all other clients
-    socket.broadcast.emit('serverReply', post);
+    socket.broadcast.emit('serverReply', postList);
   });
 
   // Handle disconnections
@@ -53,8 +54,9 @@ app.post('/submitName', function (req, res) {
 
   const submittedName = submitName(name,user_id,count);
   console.log("RECIEVEDNAME:",submittedName);
+  console.log("cur List",postList)
   // Send a response to the client
-  res.json({ message: 'Name submitted successfully' ,userData: submittedName});
+  res.json({ message: 'Name submitted successfully' ,userData: submittedName, posts:postList});
 });
 
 

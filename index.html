@@ -53,16 +53,9 @@
 </head>
 
 <body>
-  <div id="loginContainer">
-    <form action="" id="submitName">
-      <input type="text" id="name" autocomplete="given-name" /> <button>Submit Name</button>
-    </form>
-  </div>
-  <div id="postContainer">
-    <ul id="messages"></ul>
-    <form action="" id="submitPost">
-      <input type="text" id="post" autocomplete="off" /> <button>Submit</button>
-    </form>
+  <div id="app">
+    <name-component v-if="!$store.getters.signedIn" id="nameComp"></name-component>
+    <post-component v-if="$store.getters.signedIn" id="postComp"></post-component>
   </div>
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
@@ -72,29 +65,22 @@
 
   <script>
     // init ui
-    $("#postContainer").hide();
 
     // Initialize Socket.IO connection
     var socket = io();
-    // Await post update from Server
-    socket.on('serverReply', function (post) {
-      // Log the received message
-      console.log("Received:", post);
-      // Append the message to the list
-      $('#messages').append($('<li>').text(post));
-    });
 
 
     // put the raw data onto the DOM and log it to the console
     const plugin = function createWebSocketPlugin() {
       return (store) => {
-        socket.on('post', data => {
-
-          //document.getElementById("app").innerHTML +=
-          // JSON.stringify(data) + "<br /> <br /> <br /> <br />";
-          store.commit('update_posts', data)
+        // Await post update from Server
+        socket.on('serverReply', function (post) {
+          // Log the received message
+          console.log("Received:", post);
+          // Append the message to the list
+          //$('#messages').append($('<li>').text(post));
+          store.commit('update_posts', post)
         });
-
 
       }
     }
@@ -102,66 +88,126 @@
       state() {
         return {
           allPosts: [],
+          user: [],
+          signedIn: false
         }
       },
 
       mutations: {
+        update_posts(state, data) {
+          state.allPosts = data;
+        },
+        set_name(state, data) {
 
+          // set data
+          console.log("Mutations Set name data:", data)
+          state.signedIn = true;
+          state.user = data;
+          
+        }
       },
       getters: {
+        filteredPosts: state => {
+          let x = state.allPosts;
+          let returnData = x;
 
+          return returnData;
+        },
+        names: state => {
+          let x = state.name;
+          let returnData = x;
+
+          return returnData;
+        },
+        signedIn: (state) => state.signedIn,
       },
 
       plugins: [plugin()],
     });
-
+    // 5. Create and mount the root instance.
     const app = Vue.createApp({})
 
-    app.component('analy-data', {
+
+    app.component('name-component', {
       computed: {
-
+        datas() {
+          return this.$store.getters.names;
+        }
       },
-      template: ``
+      methods: {
+        submitName() {
+          // Get input value
+          var name = $('#name').val();
+
+          // Log the message
+          console.log("Name:", name);
+
+          axios.post('/submitName', { name })
+            .then((response) => {
+              var { name, user_id } = response.data.userData;
+              var posts = response.data.posts;
+              console.log("POSTS",response.data.posts);
+              console.log(posts.length);
+              this.$store.commit('set_name', { name, user_id ,posts});
+              if (posts.length>0){
+                this.$store.commit('update_posts', {posts});
+              }
+            })
+            .catch((error) => {
+              console.error(error);
+            });
+        }
+      },
+      template: `  
+        <div id="loginContainer">
+          <form @submit.prevent="submitName">
+            <input value="John" type="text" id="name" autocomplete="given-name" /> 
+            <button >Submit Name</button>
+          </form>
+        </div>`
     });
 
-    // Handle submie Post
-    $('#submitPost').submit(function () {
-      // Get input value
-      var post = $('#post').val();
 
-      // Log the message
-      console.log(post);
+    app.component('post-component', {
+      computed: {
+        posts() {
+          return this.$store.getters.filteredPosts;
+        },
+        datas() {
+          return this.$store.state.user;
+        }
+      },
+      methods: {
+        submitPost() {
 
-      // Emit 'sentPost' event to the server
-      socket.emit('sentPost', post);
+          // Get input value
+          var post = $('#post').val();
 
-      // Clear the input field
-      $('#post').val('');
 
-      return false;
+          if (post) {
+            // Log the message
+            console.log(post);
+            // Emit 'sentPost' event to the server
+            socket.emit('sentPost', { post, userData: this.$store.state.user });
+            // Clear the input field
+            $('#post').val('');
+          }
+
+        }
+      },
+      template: `  
+      <div>
+        <p>{{datas.name}}</p>
+        <p>{{datas.user_id}}</p>
+        <ul id = "messages">
+          <li v-for="post in posts">{{post}}</li>
+        </ul>
+        <form @submit.prevent="submitPost">
+          <input type="text" id="post" autocomplete="off" /> <button>Submit</button>
+        </form>
+      </div>`
     });
 
-    // handle submit Name
-    $('#submitName').submit(function () {
-      // Get input value
-      var name = $('#name').val();
-
-      // Log the message
-      console.log("Name:", name);
-
-      axios.post('/submitName', { name: "asdf" })
-        .then(function (response) {
-          console.log(response.data);
-
-          // Show post container
-          $("#postContainer").show();
-        })
-        .catch(function (error) {
-          console.error(error);
-        });
-
-      return false;
-    });
 
     app.use(store)
     app.mount('#app')

@@ -14,7 +14,7 @@
       font: 13px Helvetica, Arial;
     }
 
-    form {
+    #bottom-form form {
       background: #000;
       padding: 3px;
       position: fixed;
@@ -36,18 +36,60 @@
       padding: 10px;
     }
 
-    #messages {
+    #comment form input {
+      justify-self: end;
+    }
+
+    #comment form button {
+      justify-self: end;
+    }
+
+    #comment form {
+      display: grid;
+      width: 100%;
+    }
+
+    #bottom-post {
+      background: #000;
+      padding: 3px;
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+    }
+
+
+    #posts {
       list-style-type: none;
       margin: 0;
       padding: 0;
     }
 
-    #messages li {
-      padding: 5px 10px;
+
+    #posts li {
+      margin: 5px 10px;
+      display: block;
     }
 
-    #messages li:nth-child(odd) {
-      background: #eee;
+    #posts button {
+      margin: 0px 5px;
+    }
+
+    #posts div {
+      margin: .25rem;
+      display: flex;
+      align-items: center;
+    }
+
+    #posts li:nth-child(odd) {
+      background-color: #f4f4f4;
+    }
+
+    #posts li:hover {
+      background-color: #e0e0e0;
+    }
+
+    #data {
+      display: block;
     }
   </style>
 </head>
@@ -89,7 +131,9 @@
         return {
           allPosts: [],
           user: [],
-          signedIn: false
+          signedIn: false,
+          votedPosts: [],
+          selectedPost: []
         }
       },
 
@@ -98,19 +142,26 @@
           state.allPosts = data;
         },
         set_name(state, data) {
-
           // set data
           console.log("Mutations Set name data:", data)
           state.signedIn = true;
           state.user = data;
-          
+        },
+        set_selected(state, selected_post) {
+          // set data
+          console.log("Mutations change Selected:", selected_post)
+          state.selectedPost = selected_post;
         }
       },
       getters: {
-        filteredPosts: state => {
+        sortedPosts: state => {
           let x = state.allPosts;
-          let returnData = x;
-
+          let returnData = x.filter(e => e.parent == null).slice().sort((a, b) => b.vote - a.vote);
+          return returnData;
+        },
+        sortedCommentPosts: state => {
+          let x = state.allPosts;
+          let returnData = x.filter(e => e.parent != null).slice().sort((a, b) => b.vote - a.vote);
           return returnData;
         },
         names: state => {
@@ -146,11 +197,13 @@
             .then((response) => {
               var { name, user_id } = response.data.userData;
               var posts = response.data.posts;
-              console.log("POSTS",response.data.posts);
+              console.log("POSTS", response.data.posts);
               console.log(posts.length);
-              this.$store.commit('set_name', { name, user_id ,posts});
-              if (posts.length>0){
-                this.$store.commit('update_posts', {posts});
+              // loads user data
+              this.$store.commit('set_name', { name, user_id });
+              // loads posts if available 
+              if (posts.length > 0) {
+                this.$store.commit('update_posts', posts);
               }
             })
             .catch((error) => {
@@ -160,52 +213,182 @@
       },
       template: `  
         <div id="loginContainer">
-          <form @submit.prevent="submitName">
-            <input value="John" type="text" id="name" autocomplete="given-name" /> 
-            <button >Submit Name</button>
-          </form>
+          <div id="bottom-form">
+            <form @submit.prevent="submitName">
+              <input value="John" type="text" id="name" autocomplete="given-name" /> 
+              <button >Submit Name</button>
+            </form>
+          </div>
         </div>`
     });
 
 
     app.component('post-component', {
       computed: {
-        posts() {
-          return this.$store.getters.filteredPosts;
+        sortedPosts() {
+          return this.$store.getters.sortedPosts;
+        },
+        sortedCommentPosts() {
+          return this.$store.getters.sortedCommentPosts;
         },
         datas() {
           return this.$store.state.user;
-        }
+        },
+        selectedPost() {
+          return this.$store.state.selectedPost;
+        },
+    
       },
       methods: {
-        submitPost() {
-
+        submitPost(inputPost) {
           // Get input value
-          var post = $('#post').val();
-
-
-          if (post) {
-            // Log the message
-            console.log(post);
-            // Emit 'sentPost' event to the server
-            socket.emit('sentPost', { post, userData: this.$store.state.user });
-            // Clear the input field
-            $('#post').val('');
+          if (!inputPost) {
+            var post = $('#post').val();
+            if (post) {
+              // Log the message
+              console.log(post);
+              // Emit 'sentPost' event to the server
+              socket.emit('sentPost', { post, userData: this.$store.state.user });
+              // Clear the input field
+              $('#post').val('Test Post');
+            }
+          }else{
+            var commentPost = $('#'+ inputPost.post_id).val();
+            if(commentPost){
+              console.log(inputPost.post_id);
+              socket.emit('sentPost', { post: commentPost, userData: this.$store.state.user ,parent:inputPost.post_id});
+              
+              $('#'+inputPost.post_id).val('');
+            }
           }
+        },
+        upVote(post) {
+          console.log("up");
+          console.log(post.post_id);
+          socket.emit('sentVote', { post_id: post.post_id, up: true });
+          this.$store.state.votedPosts.push({ post_id: post.post_id, up: true });
+        },
+        downVote(post) {
+          console.log("down");
+          console.log(post.post_id);
+          socket.emit('sentVote', { post_id: post.post_id, up: false });
+          this.$store.state.votedPosts.push({ post_id: post.post_id, up: false });
+        },
+        select(selected_post) {
+          console.log("SELECTED:", selected_post.post_id);
+          if (this.$store.state.selectedPost.selected_post) {
+            console.log("CUR SELECTED:", this.$store.state.selectedPost.selected_post.post_id)
+            if (this.$store.state.selectedPost.selected_post.post_id === selected_post.post_id) {
 
-        }
+              this.$store.commit('set_selected', {});
+            } else {
+              this.$store.commit('set_selected', { selected_post });
+            }
+          } else {
+            this.$store.commit('set_selected', { selected_post });
+          }
+        },
+        unselect() {
+          this.$store.commit('set_selected', {});
+        },
+        countPosts(postId) {
+          return this.sortedCommentPosts.filter(post => post.parent === postId).length;
+        },
       },
       template: `  
-      <div>
-        <p>{{datas.name}}</p>
-        <p>{{datas.user_id}}</p>
-        <ul id = "messages">
-          <li v-for="post in posts">{{post}}</li>
-        </ul>
-        <form @submit.prevent="submitPost">
-          <input type="text" id="post" autocomplete="off" /> <button>Submit</button>
-        </form>
-      </div>`
+      <div style="display:flex;flex-direction: column;height:100vh;">
+
+        <div >
+          <div @click="unselect">
+            <p>{{datas.name}}</p>
+            <p>{{datas.user_id}}</p>
+          </div>
+
+          <ul id = "posts">
+            <li v-for="post in sortedPosts" @click="select(post)" >
+              <div id="data">
+                <div>
+                  <div id="votecontainer" @click.stop>
+                    <button @click="upVote(post)" :disabled="$store.state.votedPosts.find(e => e.post_id === post.post_id && e.up === true)">up</button> 
+                    <button @click="downVote(post)" :disabled="$store.state.votedPosts.find(e => e.post_id === post.post_id && e.up === false)">down</button>
+                  </div>
+                  <div>
+                    {{post.vote}}
+                  </div>
+                  <div>
+                    Replies: {{ countPosts(post.post_id) }}
+                  </div>
+                </div>
+                
+                <div>
+                  <div>
+                    {{post.name}}
+                  </div>
+                  <div>
+                    {{post.data}}
+                  </div>
+                </div>
+              </div>
+
+              <div @click.stop id="comment" v-if="selectedPost.selected_post && post.post_id === selectedPost.selected_post.post_id">
+
+
+
+                <ul>
+                  <li v-for="cPost in sortedCommentPosts" >
+
+                    <div id="data" v-if="cPost.parent == post.post_id">
+                      <div>
+      
+                        <div id="votecontainer" @click.stop>
+                          <button @click="upVote(cPost)" :disabled="$store.state.votedPosts.find(e => e.post_id === cPost.post_id && e.up === true)">up</button> 
+                          <button @click="downVote(cPost)" :disabled="$store.state.votedPosts.find(e => e.post_id === cPost.post_id && e.up === false)">down</button>
+                        </div>
+
+                        <div>
+                          {{cPost.vote}}
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div>
+                          {{cPost.name}}
+                        </div>
+                        <div>
+                          {{cPost.data}}
+                        </div>
+                      </div>
+                    </div>
+
+
+
+                  </li>
+                </ul>
+
+
+
+                <form @submit.prevent="submitPost(post)">
+                  <input type="text" :id="post.post_id" autocomplete="off" /> 
+                  <button>Submit</button>
+                </form>
+
+
+              </div>
+
+
+            </li>
+          </ul>
+
+
+        </div>
+        <div id="spacer" @click="unselect" style="flex-grow:1;"></div>
+        <div id ="bottom-post">
+          <form @submit.prevent="submitPost()">
+            <input type="text" id="post" autocomplete="off" value="TEST RESPONSE" /> <button>Submit</button>
+          </form>
+        </div>
+      </div>
+      `
     });
 
 

@@ -10,63 +10,122 @@
       box-sizing: border-box;
     }
 
-    body {
-      font: 13px Helvetica, Arial;
+    #postComp {
+      display: grid;
+      flex-wrap: wrap;
+      max-width: 800px;
+      margin: 20px auto;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      grid-template-columns: 1fr;
     }
 
-    #bottom-form form {
-      background: #000;
-      padding: 3px;
-      position: fixed;
-      bottom: 0;
-      width: 100%;
+    #nameComp {
+      width: 50%;
+    }
+
+    body {
+      font: 13px Helvetica, Arial;
     }
 
     form input {
       border: 0;
       padding: 10px;
-      width: 90%;
       margin-right: .5%;
+      max-width: 100%;
     }
 
     form button {
-      width: 9%;
+      width: 100px;
       background: rgb(130, 224, 255);
       border: none;
       padding: 10px;
     }
 
-    #comment form input {
-      justify-self: end;
+    #comment-container {
+      display: grid!important;
+      width: 100%;
+      max-width: 750px;
     }
 
-    #comment form button {
-      justify-self: end;
+    #comment-left-container {
+      width: 100%;
     }
 
-    #comment form {
+    #comment-data {
+      overflow-wrap: break-word;
+      max-width: inherit;
+      
+    }
+
+    #comment-right-container {
+      background: #000;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      border-radius: .25rem;
+    }
+
+    #comment-right-container form input {
+      width: 100%;
+      padding: 10px;
+      margin-right: .5%;
+    }
+
+    #comment-right-container form button {
+      margin:0px;
+      margin-left: 3px;
+    }
+
+    #comment-right-container form {
       display: grid;
       width: 100%;
+      margin: 3px;
+      grid-template-columns: 1fr auto;
     }
 
-    #bottom-post {
+    #replies-container{
+      width: max-content;
+    }
+    #post-top-container{
+      max-width: 760px;
+    }
+
+    #post-bottom-container {
       background: #000;
       padding: 3px;
-      position: fixed;
-      bottom: 0;
-      width: 100%;
+      position: relative;
+      margin-top: 20px;
+      border-radius: .25rem;
+      box-shadow: 0 0px 15px rgba(0, 0, 0, 0.2);
     }
 
+    #post-bottom-container form {
+      display: grid;
+      grid-template-columns: 1fr auto;
+    }
+
+    #post-header-container {
+      display: flex;
+
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    #post-header-container p {
+      margin: 1rem;
+
+    }
 
     #posts {
       list-style-type: none;
       margin: 0;
-      padding: 0;
+      overflow-y: auto;
+      height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
 
-
     #posts li {
-      margin: 5px 10px;
       display: block;
     }
 
@@ -74,11 +133,22 @@
       margin: 0px 5px;
     }
 
-    #posts div {
-      margin: .25rem;
-      display: flex;
-      align-items: center;
+    @media (min-width: 500px) {
+      #posts div {
+        margin: .25rem;
+        display: flex;
+        align-items: center;
+      }
     }
+    @media (max-width: 500px) { 
+      #posts div {
+        margin: .25rem;
+        display: inline-block;;
+        align-items: center;
+      }
+    }
+
+
 
     #posts li:nth-child(odd) {
       background-color: #f4f4f4;
@@ -237,7 +307,7 @@
         selectedPost() {
           return this.$store.state.selectedPost;
         },
-    
+
       },
       methods: {
         submitPost(inputPost) {
@@ -252,13 +322,13 @@
               // Clear the input field
               $('#post').val('Test Post');
             }
-          }else{
-            var commentPost = $('#'+ inputPost.post_id).val();
-            if(commentPost){
+          } else {
+            var commentPost = $('#' + inputPost.post_id).val();
+            if (commentPost) {
               console.log(inputPost.post_id);
-              socket.emit('sentPost', { post: commentPost, userData: this.$store.state.user ,parent:inputPost.post_id});
-              
-              $('#'+inputPost.post_id).val('');
+              socket.emit('sentPost', { post: commentPost, userData: this.$store.state.user, parent: inputPost.post_id });
+
+              $('#' + inputPost.post_id).val('');
             }
           }
         },
@@ -296,12 +366,12 @@
         },
       },
       template: `  
-      <div style="display:flex;flex-direction: column;height:100vh;">
+      <div>
 
-        <div >
-          <div @click="unselect">
-            <p>{{datas.name}}</p>
-            <p>{{datas.user_id}}</p>
+        <div id="post-top-container">
+          <div id="post-header-container" @click="unselect">
+            <p>Username: {{datas.name}}</p>
+            <p>User ID: {{datas.user_id}}</p>
           </div>
 
           <ul id = "posts">
@@ -315,7 +385,7 @@
                   <div>
                     {{post.vote}}
                   </div>
-                  <div>
+                  <div id="replies-container">
                     Replies: {{ countPosts(post.post_id) }}
                   </div>
                 </div>
@@ -330,63 +400,66 @@
                 </div>
               </div>
 
-              <div @click.stop id="comment" v-if="selectedPost.selected_post && post.post_id === selectedPost.selected_post.post_id">
+              <div @click.stop id="comment-container" v-if="selectedPost.selected_post && post.post_id === selectedPost.selected_post.post_id">
 
-
-
-                <ul>
-                  <li v-for="cPost in sortedCommentPosts" >
-
-                    <div id="data" v-if="cPost.parent == post.post_id">
-                      <div>
-      
-                        <div id="votecontainer" @click.stop>
-                          <button @click="upVote(cPost)" :disabled="$store.state.votedPosts.find(e => e.post_id === cPost.post_id && e.up === true)">up</button> 
-                          <button @click="downVote(cPost)" :disabled="$store.state.votedPosts.find(e => e.post_id === cPost.post_id && e.up === false)">down</button>
-                        </div>
-
+              <div id="comment-left-container">
+                  <ul>
+                    <li v-for="cPost in sortedCommentPosts" >
+                      <div id="data" v-if="cPost.parent == post.post_id">
                         <div>
-                          {{cPost.vote}}
+                          <div id="votecontainer" @click.stop>
+                            <button @click="upVote(cPost)" :disabled="$store.state.votedPosts.find(e => e.post_id === cPost.post_id && e.up === true)">up</button> 
+                            <button @click="downVote(cPost)" :disabled="$store.state.votedPosts.find(e => e.post_id === cPost.post_id && e.up === false)">down</button>
+                          </div>
+                          <div>
+                            {{cPost.vote}}
+                          </div>
+                        </div>
+                        <div>
+                          <div>
+                            <p>
+                              {{cPost.name}}
+                            </p>
+                          </div>
+                          <div>
+                            <p id="comment-data">
+
+                              {{cPost.data}}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                      
-                      <div>
-                        <div>
-                          {{cPost.name}}
-                        </div>
-                        <div>
-                          {{cPost.data}}
-                        </div>
-                      </div>
-                    </div>
+                    </li>
+                  </ul>
+                </div>
 
 
-
-                  </li>
-                </ul>
-
-
-
-                <form @submit.prevent="submitPost(post)">
-                  <input type="text" :id="post.post_id" autocomplete="off" /> 
-                  <button>Submit</button>
-                </form>
-
-
+                <div id = "comment-right-container">
+                  <form @submit.prevent="submitPost(post)">
+                    <input type="text" :id="post.post_id" autocomplete="off" /> 
+                    <button>Comment</button>
+                  </form>
+                </div>
+                  
               </div>
 
 
             </li>
+
+            <div id="spacer" @click="unselect" style="flex-grow:1;"></div>
+
           </ul>
 
+         
 
         </div>
-        <div id="spacer" @click="unselect" style="flex-grow:1;"></div>
-        <div id ="bottom-post">
+
+        <div id ="post-bottom-container">
           <form @submit.prevent="submitPost()">
             <input type="text" id="post" autocomplete="off" value="TEST RESPONSE" /> <button>Submit</button>
           </form>
         </div>
+
       </div>
       `
     });

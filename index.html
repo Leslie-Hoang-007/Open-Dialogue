@@ -22,7 +22,22 @@
     }
 
     #nameComp {
-      width: 50%;
+      display: grid;
+      flex-wrap: wrap;
+      max-width: 800px;
+      width: fit-content;
+      margin: 20px auto;
+      background-color: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      grid-template-columns: 1fr;
+    }
+
+    #nameComp form {
+      display: flex;
+      padding: 3px;
+      background-color: black;
+      border-radius: .25rem;
     }
 
     body {
@@ -37,16 +52,15 @@
     }
 
     form button {
-      width: 100px;
       background: rgb(130, 224, 255);
       border: none;
       padding: 10px;
     }
 
     #comment-container {
-      display: grid!important;
-      width: 100%;
-      max-width: 750px;
+      display: grid !important;
+      width: 98%;
+      max-width: inherit;
     }
 
     #comment-left-container {
@@ -56,7 +70,7 @@
     #comment-data {
       overflow-wrap: break-word;
       max-width: inherit;
-      
+
     }
 
     #comment-right-container {
@@ -72,7 +86,7 @@
     }
 
     #comment-right-container form button {
-      margin:0px;
+      margin: 0px;
       margin-left: 3px;
     }
 
@@ -83,10 +97,11 @@
       grid-template-columns: 1fr auto;
     }
 
-    #replies-container{
+    #replies-container {
       width: max-content;
     }
-    #post-top-container{
+
+    #post-top-container {
       max-width: 760px;
     }
 
@@ -140,10 +155,12 @@
         align-items: center;
       }
     }
-    @media (max-width: 500px) { 
+
+    @media (max-width: 500px) {
       #posts div {
         margin: .25rem;
-        display: inline-block;;
+        display: inline-block;
+        ;
         align-items: center;
       }
     }
@@ -257,36 +274,35 @@
       },
       methods: {
         submitName() {
-          // Get input value
-          var name = $('#name').val();
+          // get user ip and registers (Name,IP)
+          var userIp = ""
+          axios.post('/submitName', {})
+          .then((response) => {
+            var { username, _id } = response.data.userData;
+            var posts = response.data.posts;
+            console.log("POSTS", response.data.posts);
+            console.log(posts.length);
+            console.log("DATA",response.data);
 
-          // Log the message
-          console.log("Name:", name);
+            // loads user data
+            this.$store.commit('set_name', { username, _id });
+            // loads posts if available 
+            if (posts.length > 0) {
+              this.$store.commit('update_posts', posts);
+            }
+          })
+          .catch((error) => {
+            console.error(error);
+          });
 
-          axios.post('/submitName', { name })
-            .then((response) => {
-              var { name, user_id } = response.data.userData;
-              var posts = response.data.posts;
-              console.log("POSTS", response.data.posts);
-              console.log(posts.length);
-              // loads user data
-              this.$store.commit('set_name', { name, user_id });
-              // loads posts if available 
-              if (posts.length > 0) {
-                this.$store.commit('update_posts', posts);
-              }
-            })
-            .catch((error) => {
-              console.error(error);
-            });
+       
         }
       },
       template: `  
         <div id="loginContainer">
           <div id="bottom-form">
             <form @submit.prevent="submitName">
-              <input value="John" type="text" id="name" autocomplete="given-name" /> 
-              <button >Submit Name</button>
+              <button>Generate a Username and Join Conversation</button>
             </form>
           </div>
         </div>`
@@ -323,32 +339,32 @@
               $('#post').val('Test Post');
             }
           } else {
-            var commentPost = $('#' + inputPost.post_id).val();
+            var commentPost = $('#' + inputPost._id).val();
             if (commentPost) {
-              console.log(inputPost.post_id);
-              socket.emit('sentPost', { post: commentPost, userData: this.$store.state.user, parent: inputPost.post_id });
+              console.log("ParentPOSTID",inputPost._id);
+              socket.emit('sentPost', { post: commentPost, userData: this.$store.state.user, parent: inputPost._id });
 
-              $('#' + inputPost.post_id).val('');
+              $('#' + inputPost._id).val('');
             }
           }
         },
         upVote(post) {
           console.log("up");
-          console.log(post.post_id);
-          socket.emit('sentVote', { post_id: post.post_id, up: true });
-          this.$store.state.votedPosts.push({ post_id: post.post_id, up: true });
+          console.log(post._id);
+          socket.emit('sentVote', { _id: post._id, up: true });
+          this.$store.state.votedPosts.push({ _id: post._id, up: true });
         },
         downVote(post) {
           console.log("down");
-          console.log(post.post_id);
-          socket.emit('sentVote', { post_id: post.post_id, up: false });
-          this.$store.state.votedPosts.push({ post_id: post.post_id, up: false });
+          console.log(post._id);
+          socket.emit('sentVote', { _id: post._id, up: false });
+          this.$store.state.votedPosts.push({ _id: post._id, up: false });
         },
         select(selected_post) {
-          console.log("SELECTED:", selected_post.post_id);
+          console.log("SELECTED:", selected_post._id);
           if (this.$store.state.selectedPost.selected_post) {
-            console.log("CUR SELECTED:", this.$store.state.selectedPost.selected_post.post_id)
-            if (this.$store.state.selectedPost.selected_post.post_id === selected_post.post_id) {
+            console.log("CUR SELECTED:", this.$store.state.selectedPost.selected_post._id)
+            if (this.$store.state.selectedPost.selected_post._id === selected_post._id) {
 
               this.$store.commit('set_selected', {});
             } else {
@@ -370,8 +386,8 @@
 
         <div id="post-top-container">
           <div id="post-header-container" @click="unselect">
-            <p>Username: {{datas.name}}</p>
-            <p>User ID: {{datas.user_id}}</p>
+            <p>Username: {{datas.username}}</p>
+            <p>User ID: {{datas._id}}</p>
           </div>
 
           <ul id = "posts">
@@ -379,37 +395,37 @@
               <div id="data">
                 <div>
                   <div id="votecontainer" @click.stop>
-                    <button @click="upVote(post)" :disabled="$store.state.votedPosts.find(e => e.post_id === post.post_id && e.up === true)">up</button> 
-                    <button @click="downVote(post)" :disabled="$store.state.votedPosts.find(e => e.post_id === post.post_id && e.up === false)">down</button>
+                    <button @click="upVote(post)" :disabled="$store.state.votedPosts.find(e => e._id === post._id && e.up === true)">up</button> 
+                    <button @click="downVote(post)" :disabled="$store.state.votedPosts.find(e => e._id === post._id && e.up === false)">down</button>
                   </div>
                   <div>
                     {{post.vote}}
                   </div>
                   <div id="replies-container">
-                    Replies: {{ countPosts(post.post_id) }}
+                    Replies: {{ countPosts(post._id) }}
                   </div>
                 </div>
                 
                 <div>
                   <div>
-                    {{post.name}}
+                    {{post.username}}
                   </div>
                   <div>
-                    {{post.data}}
+                    {{post.text}}
                   </div>
                 </div>
               </div>
 
-              <div @click.stop id="comment-container" v-if="selectedPost.selected_post && post.post_id === selectedPost.selected_post.post_id">
+              <div @click.stop id="comment-container" v-if="selectedPost.selected_post && post._id === selectedPost.selected_post._id">
 
               <div id="comment-left-container">
                   <ul>
                     <li v-for="cPost in sortedCommentPosts" >
-                      <div id="data" v-if="cPost.parent == post.post_id">
+                      <div id="data" v-if="cPost.parent == post._id">
                         <div>
                           <div id="votecontainer" @click.stop>
-                            <button @click="upVote(cPost)" :disabled="$store.state.votedPosts.find(e => e.post_id === cPost.post_id && e.up === true)">up</button> 
-                            <button @click="downVote(cPost)" :disabled="$store.state.votedPosts.find(e => e.post_id === cPost.post_id && e.up === false)">down</button>
+                            <button @click="upVote(cPost)" :disabled="$store.state.votedPosts.find(e => e._id === cPost._id && e.up === true)">up</button> 
+                            <button @click="downVote(cPost)" :disabled="$store.state.votedPosts.find(e => e._id === cPost._id && e.up === false)">down</button>
                           </div>
                           <div>
                             {{cPost.vote}}
@@ -418,13 +434,13 @@
                         <div>
                           <div>
                             <p>
-                              {{cPost.name}}
+                              {{cPost.username}}
                             </p>
                           </div>
                           <div>
                             <p id="comment-data">
 
-                              {{cPost.data}}
+                              {{cPost.text}}
                             </p>
                           </div>
                         </div>
@@ -436,7 +452,7 @@
 
                 <div id = "comment-right-container">
                   <form @submit.prevent="submitPost(post)">
-                    <input type="text" :id="post.post_id" autocomplete="off" /> 
+                    <input type="text" :id="post._id" autocomplete="off" /> 
                     <button>Comment</button>
                   </form>
                 </div>

@@ -8,6 +8,6 @@ A LAN server that facilitates collaboration amongst users on the same network. A
 - MongoDB intergration with Mongoose
 
 # How to use
-Create an .env file in the main directory and add in your own Mongodb URI for example:
-dbURI = 'mongodb+srv://<Username>:<Password>@opendialoguedb.bzx2uwd.mongodb.net/openDialogue?retryWrites=true&w=majority'
+Create an .env file in the main directory and add in your own Mongodb URI for example:  
+dbURI = 'mongodb+srv://<Username>:<Password>@opendialoguedb.bzx2uwd.mongodb.net/openDialogue?retryWrites=true&w=majority'  
 Install packages with 'npm install' command in terminal. Run server with 'npm start' command in terminal. Visit web server as specified in the terminal.

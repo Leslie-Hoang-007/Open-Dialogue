@@ -12,11 +12,11 @@ Create an .env file in the main directory and add in your own Mongodb URI for ex
 ```
 dbURI = 'mongodb+srv://<Username>:<Password>@opendialoguedb.bzx2uwd.mongodb.net/openDialogue?retryWrites=true&w=majority'
 ```
-Install packages 
+Install packages.
 ```
 npm install
 ```
-Run server 
+Run server.
 ```
 npm start
 ```
